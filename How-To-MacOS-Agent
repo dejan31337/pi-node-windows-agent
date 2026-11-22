@@ -1,0 +1,252 @@
+# Pi Node Monitor – macOS Helper 1.0
+## Installation Guide
+
+This guide explains how to install and run `macos-agent.py` on macOS.
+
+The helper connects to your existing Pi Node Docker container and provides monitoring information to Pi Node Monitor.
+
+### Requirements
+
+- macOS
+- Python 3
+- Existing Pi Node Docker container running
+
+## STEP 1 – Check Python 3
+
+Open Terminal and execute:
+
+```bash
+python3 --version
+```
+
+Python 3 must be installed.
+
+If it is missing, download it from:
+
+https://www.python.org/downloads/macos/
+
+## STEP 2 – Download macos-agent.py
+
+Open the GitHub repository:
+
+https://github.com/dejan31337/pi-node-windows-agent
+
+Find `macos-agent.py`.
+
+1. Open the file.
+2. Click Raw.
+3. Save the file as `macos-agent.py`.
+4. Create a folder named `pi-node-macos-agent` in your home directory.
+5. Move `macos-agent.py` into that folder.
+
+Your folder should look like:
+
+```text
+pi-node-macos-agent/
+    macos-agent.py
+```
+
+## STEP 3 – Generate your private token
+
+Every user must generate their own security token.
+
+Open Terminal and execute:
+
+```bash
+python3 -c "import secrets; print(secrets.token_urlsafe(32))"
+```
+
+Copy the generated token and keep it private.
+
+Never share your token or upload it to GitHub.
+
+## STEP 4 – Create the .env configuration
+
+Open Terminal:
+
+```bash
+cd ~/pi-node-macos-agent
+nano .env
+```
+
+Paste:
+
+```env
+NODE_STATUS_TOKEN=PASTE_YOUR_PRIVATE_TOKEN_HERE
+PI_NODE_CONTAINER=testnet2
+AGENT_HOST=0.0.0.0
+AGENT_PORT=18765
+```
+
+Replace `PASTE_YOUR_PRIVATE_TOKEN_HERE` with your generated token.
+
+If your Pi Node container has a different name, replace `testnet2`.
+
+Save the file:
+
+1. Press Control + O.
+2. Press Enter.
+3. Press Control + X.
+
+Protect your token:
+
+```bash
+chmod 600 .env
+```
+
+## STEP 5 – Start macOS Helper
+
+In Terminal:
+
+```bash
+cd ~/pi-node-macos-agent
+python3 macos-agent.py
+```
+
+You should see:
+
+```text
+Pi Node Monitor - macOS Helper
+Version: 1.0
+Container: testnet2
+Listening: 0.0.0.0:18765
+```
+
+Keep Terminal open while the helper is running.
+
+To stop it, press Control + C.
+
+## STEP 6 – Test the helper
+
+Open another Terminal window.
+
+Test the health endpoint:
+
+```bash
+curl http://127.0.0.1:18765/health
+```
+
+Load your token:
+
+```bash
+cd ~/pi-node-macos-agent
+TOKEN=$(sed -n 's/^NODE_STATUS_TOKEN=//p' .env | head -n 1)
+```
+
+Test node status:
+
+```bash
+curl -H "Authorization: Bearer $TOKEN" \
+http://127.0.0.1:18765/status
+```
+
+Test services:
+
+```bash
+curl -H "Authorization: Bearer $TOKEN" \
+http://127.0.0.1:18765/services
+```
+
+Test Stellar Core logs:
+
+```bash
+curl -H "Authorization: Bearer $TOKEN" \
+"http://127.0.0.1:18765/logs?service=stellar-core&lines=200"
+```
+
+## STEP 7 – Configure your dashboard
+
+Use the same token in your Pi Node Monitor dashboard configuration.
+
+For a dashboard running in Docker on the same Mac, use:
+
+```text
+http://host.docker.internal:18765/status
+```
+
+The dashboard token must exactly match `NODE_STATUS_TOKEN` in your `.env` file.
+
+## STEP 8 – Start after restarting your Mac
+
+After restarting your Mac, start the helper again:
+
+```bash
+cd ~/pi-node-macos-agent
+python3 macos-agent.py
+```
+
+Keep the Terminal window open while using the helper.
+
+## Troubleshooting
+
+**Unauthorized**
+
+Check that the token in the dashboard matches the token in `.env`. Restart the helper after changing the token.
+
+**Container not found**
+
+Check the container name:
+
+```bash
+docker ps
+```
+
+Make sure `PI_NODE_CONTAINER` in `.env` matches the actual container name.
+
+**Port already in use**
+
+Check:
+
+```bash
+lsof -i :18765
+```
+
+**Helper not responding**
+
+Check Python:
+
+```bash
+python3 --version
+```
+
+Check the health endpoint:
+
+```bash
+curl http://127.0.0.1:18765/health
+```
+
+## Security
+
+- Generate your own private token.
+- Never share your token.
+- Never upload `.env` to GitHub.
+- Do not expose port 18765 directly to the public internet.
+- Use a trusted private network or secure remote access.
+
+Create a `.gitignore` file containing:
+
+```gitignore
+.env
+*.pyc
+__pycache__/
+```
+
+---
+
+**Pi Node Monitor – macOS Helper**
+
+Version: 1.0
+
+Platform: macOS
+
+File: `macos-agent.py`
+
+Runtime: Python 3
+
+Default port: 18765
+
+Authentication: Private Bearer Token
+
+Repository:
+
+https://github.com/dejan31337/pi-node-windows-agent
