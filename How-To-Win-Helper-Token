@@ -1,0 +1,156 @@
+# Pi Node Monitor – Windows Helper Token Setup
+
+## Overview
+
+The Pi Node Windows Helper uses a secure authentication token to communicate with the Pi Node Monitor dashboard.
+
+Each user must generate their own private token on their Windows computer.
+
+**Never use somebody else's token. Never publish your token on GitHub.**
+
+## Step 1 – Open PowerShell
+
+On your Windows 10/11 computer:
+
+1. Press `Win + X`.
+2. Select Windows Terminal or PowerShell.
+3. Copy and execute the following command:
+
+```powershell
+$bytes = New-Object byte[] 32
+$rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+$rng.GetBytes($bytes)
+$rng.Dispose()
+$token = [Convert]::ToBase64String($bytes)
+$token
+```
+
+PowerShell will generate a random 256-bit security token.
+
+Copy the generated token and keep it private.
+
+## Step 2 – Open the Windows Helper folder
+
+Run:
+
+```powershell
+cd C:\dir of windows agent
+```
+
+If your helper is installed in a different folder, change the path accordingly.
+
+## Step 3 – Configure the .env file
+
+Open the configuration file:
+
+```powershell
+notepad .env
+```
+
+Add or update the following line:
+
+```env
+NODE_STATUS_TOKEN=PASTE_YOUR_GENERATED_TOKEN_HERE
+```
+
+Replace `PASTE_YOUR_GENERATED_TOKEN_HERE` with your generated token.
+
+Save the file and close Notepad.
+
+**Important:** Do not add quotation marks around the token.
+
+## Step 4 – Configure the Pi Node Monitor dashboard
+
+Open your Pi Node Monitor SoloHost configuration.
+
+Find the Windows Helper authentication token setting:
+
+```text
+NODE_STATUS_TOKEN
+```
+
+Enter exactly the same token that you saved in the Windows Helper `.env` file.
+
+Both sides must use the same token.
+
+## Step 5 – Start the Windows Helper
+
+Open PowerShell in the helper folder and run:
+
+```powershell
+python .\windows-agent.py
+```
+
+Keep the helper running.
+
+If you already have the helper running, stop it with `Ctrl + C` and start it again so it loads the new token.
+
+## Step 6 – Test the Windows Helper
+
+Open another PowerShell window.
+
+Navigate to the helper folder:
+
+```powershell
+cd C:\your folder of windows helper
+```
+
+Load the token without displaying it:
+
+```powershell
+$line = Get-Content .\.env | Where-Object {
+    $_ -match '^\s*NODE_STATUS_TOKEN='
+} | Select-Object -First 1
+
+$token = ($line -split '=', 2)[1].Trim().Trim('"').Trim("'")
+$headers = @{ Authorization = "Bearer $token" }
+```
+
+Test the health endpoint:
+
+```powershell
+Invoke-RestMethod http://127.0.0.1:18765/health
+```
+
+Test the authenticated status endpoint:
+
+```powershell
+Invoke-RestMethod http://127.0.0.1:18765/status -Headers $headers
+```
+
+A successful response confirms that the helper is responding and that the authentication token is accepted.
+
+## Step 7 – Security recommendations
+
+- Generate a unique token for every Windows installation.
+- Never share your token with other users.
+- Never upload your `.env` file to GitHub.
+- Never include your token in screenshots, logs, or public support messages.
+- If your token becomes public, generate a new one and update both the Windows Helper and dashboard.
+- Use HTTPS or a secure private network when exposing the dashboard remotely.
+
+## Step 8 – Protect your .env file on GitHub
+
+Create or edit `.gitignore` in your repository and include:
+
+```gitignore
+.env
+*.pyc
+__pycache__/
+```
+
+This helps prevent accidental uploads of private configuration and Python cache files.
+
+**Remember:** The Windows Helper token is private. The dashboard and Windows Helper must have matching tokens for authenticated communication.
+
+---
+
+**Pi Node Monitor – Windows Helper**
+
+Version: 1.6
+
+Platform: Windows 10 / Windows 11
+
+Authentication: Private Bearer Token
+
+Communication: Read-only node monitoring endpoints and authenticated service controls.
